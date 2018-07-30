@@ -7,33 +7,16 @@ import (
 
 //GetAllPersons ... GET
 func (cn *Controller) GetAllPersons(c iris.Context) {
+	var persons []models.Person
 
-	rows, err := cn.DB.Query("SELECT * FROM person")
+	_, err := cn.DB.Query(&persons, "SELECT * FROM person")
 	if err != nil {
 		c.Values().Set("error", "Selecting persons failed. "+err.Error())
 		c.StatusCode(iris.StatusInternalServerError)
 		return
 	}
-	defer rows.Close()
 
-	pers := make([]*models.Person, 0)
-	for rows.Next() {
-		p := new(models.Person)
-		err := rows.Scan(&p.Firstname, &p.Lastname, &p.ID)
-		if err != nil {
-			c.StatusCode(iris.StatusBadRequest)
-			c.WriteString(err.Error())
-			return
-		}
-		pers = append(pers, p)
-	}
-	if err = rows.Err(); err != nil {
-		c.StatusCode(iris.StatusBadRequest)
-		c.WriteString(err.Error())
-		return
-	}
-
-	if len(pers) == 0 {
+	if len(persons) == 0 {
 		c.StatusCode(iris.StatusBadRequest)
 		c.JSON(iris.Map{
 			"error": "No person in the databse",
@@ -43,7 +26,7 @@ func (cn *Controller) GetAllPersons(c iris.Context) {
 
 	c.StatusCode(iris.StatusOK)
 	c.JSON(iris.Map{
-		"people": pers,
+		"people": persons,
 	})
 }
 
@@ -52,43 +35,20 @@ func (cn *Controller) GetPersonByID(c iris.Context) {
 
 	personID, _ := c.Params().GetInt("id")
 
-	rows, err := cn.DB.Query("SELECT * FROM person WHERE id = $1", personID)
+	var person models.Person
+
+	_, err := cn.DB.QueryOne(&person, "SELECT * FROM person WHERE id = ?", personID)
 	if err != nil {
-		c.Values().Set("error", "Selecting persons failed. "+err.Error())
-		c.StatusCode(iris.StatusInternalServerError)
-		return
-	}
-	defer rows.Close()
-
-	pers := make([]*models.Person, 0)
-	for rows.Next() {
-		p := new(models.Person)
-		err := rows.Scan(&p.Firstname, &p.Lastname, &p.ID)
-		if err != nil {
-			c.StatusCode(iris.StatusBadRequest)
-			c.WriteString(err.Error())
-			return
-		}
-		pers = append(pers, p)
-	}
-
-	if err = rows.Err(); err != nil {
-		c.StatusCode(iris.StatusBadRequest)
-		c.WriteString(err.Error())
-		return
-	}
-
-	if len(pers) == 0 {
 		c.StatusCode(iris.StatusBadRequest)
 		c.JSON(iris.Map{
-			"error": "No person in the databse",
+			"error": "No person with this ID in the databse",
 		})
 		return
 	}
 
 	c.StatusCode(iris.StatusOK)
 	c.JSON(iris.Map{
-		"people": pers,
+		"people": person,
 	})
 
 }
@@ -103,16 +63,33 @@ func (cn *Controller) CreatePerson(c iris.Context) {
 		c.Values().Set("error", "creating user, read and parse form failed. "+err.Error())
 		return
 	}
-
-	_, err := cn.DB.Exec("INSERT INTO person VALUES ($1, $2)", person.Firstname, person.Lastname)
+	_, err := cn.DB.QueryOne(&person, "INSERT INTO person VALUES (?, ?) RETURNING id ", person.Firstname, person.Lastname, &person)
 	if err != nil {
 		panic(err)
 	}
 
 	c.StatusCode(iris.StatusOK)
 	c.JSON(iris.Map{
+		"id":        person.ID,
 		"firstname": person.Firstname,
 		"Lastname":  person.Lastname,
+	})
+
+}
+
+//DeletePerson ... DELETE
+func (cn *Controller) DeletePerson(c iris.Context) {
+
+	personID, _ := c.Params().GetInt("id")
+
+	_, err := cn.DB.Exec("DELETE FROM person WHERE id = ? RETURNING * ", personID)
+	if err != nil {
+		panic(err)
+	}
+
+	c.StatusCode(iris.StatusOK)
+	c.JSON(iris.Map{
+		"message": "Person deleted",
 	})
 
 }

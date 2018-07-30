@@ -1,50 +1,36 @@
 package main
 
 import (
-	"database/sql"
-	"log"
-
 	"github.com/AliceEmer/API-IRIS/controllers"
+	"github.com/go-pg/pg"
 	"github.com/kataras/iris"
-
-	_ "github.com/lib/pq"
 )
 
 func main() {
 
-	database := InitDB("postgres://aliceecourtemer:password@localhost/persons?sslmode=disable")
+	db := pg.Connect(&pg.Options{
+		User:     "aliceecourtemer",
+		Password: "password",
+		Database: "persons",
+	})
 
-	cn := &controllers.Controller{DB: database}
+	cn := &controllers.Controller{DB: db}
 
 	app := iris.Default()
-
-	//api := app.Party("/api")
+	//Routing group
+	api := app.Party("/api", apiMiddleware)
 
 	app.Get("/persons", cn.GetAllPersons)
-	app.Get("/persons/{id:int}", cn.GetPersonByID)
-
-	app.Post("/persons", cn.CreatePerson)
+	api.Get("/persons/{id:int}", cn.GetPersonByID)
+	api.Post("/persons", cn.CreatePerson)
+	api.Delete("/deleteperson/{id:int}", cn.DeletePerson)
 
 	// Listen and serve on http://localhost:8080.
 	app.Run(iris.Addr(":8080"))
 
 }
 
-//InitDB ...
-func InitDB(dataSourceName string) *sql.DB {
-	var db *sql.DB
-	var err error
-
-	db, err = sql.Open("postgres", dataSourceName)
-	if err != nil {
-		log.Panic(err)
-	}
-
-	//defer db.Close()
-
-	if err = db.Ping(); err != nil {
-		log.Panic(err)
-	}
-
-	return db
+func apiMiddleware(ctx iris.Context) {
+	// [...]
+	ctx.Next() // to move to the next handler, or don't that if you have any auth logic.
 }

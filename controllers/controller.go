@@ -1,10 +1,8 @@
 package controllers
 
-import (
-	"database/sql"
-)
+import "github.com/go-pg/pg"
 
 //Controller ... Database connection
 type Controller struct {
-	DB *sql.DB
+	DB *pg.DB
 }
