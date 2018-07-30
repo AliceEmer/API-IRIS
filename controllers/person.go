@@ -60,7 +60,7 @@ func (cn *Controller) CreatePerson(c iris.Context) {
 
 	if err := c.ReadJSON(&person); err != nil {
 		c.StatusCode(iris.StatusInternalServerError)
-		c.Values().Set("error", "creating user, read and parse form failed. "+err.Error())
+		c.Values().Set("error", "Creating person, read and parse form failed. "+err.Error())
 		return
 	}
 	_, err := cn.DB.QueryOne(&person, "INSERT INTO person VALUES (?, ?) RETURNING id ", person.Firstname, person.Lastname, &person)

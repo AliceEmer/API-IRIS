@@ -18,9 +18,12 @@ func main() {
 
 	app := iris.Default()
 	//Routing group
-	api := app.Party("/api", apiMiddleware)
 
-	app.Get("/persons", cn.GetAllPersons)
+	app.Post("/signup", cn.SignUp)
+	app.Post("/signin", cn.SignIn)
+
+	api := app.Party("/api", apiMiddleware)
+	api.Get("/persons", cn.GetAllPersons)
 	api.Get("/persons/{id:int}", cn.GetPersonByID)
 	api.Post("/persons", cn.CreatePerson)
 	api.Delete("/deleteperson/{id:int}", cn.DeletePerson)
