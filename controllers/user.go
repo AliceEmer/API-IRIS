@@ -1,7 +1,10 @@
 package controllers
 
 import (
+	"time"
+
 	"github.com/AliceEmer/API-IRIS/models"
+	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/go-pg/pg"
 	"github.com/kataras/iris"
 	"golang.org/x/crypto/bcrypt"
@@ -50,7 +53,7 @@ func (cn *Controller) SignIn(c iris.Context) {
 		return
 	}
 
-	_, err := cn.DB.QueryOne(&userCheck, "SELECT username, password FROM users WHERE username = ?", user.Username)
+	_, err := cn.DB.QueryOne(&userCheck, "SELECT id, username, password FROM users WHERE username = ?", user.Username)
 	if err != nil {
 		if err == pg.ErrNoRows {
 			c.StatusCode(iris.StatusBadRequest)
@@ -69,9 +72,28 @@ func (cn *Controller) SignIn(c iris.Context) {
 		return
 	}
 
+	// https://github.com/dgrijalva/jwt-go
+	// Create a new token object, specifying signing method and the claims
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"id":       userCheck.ID,
+		"username": userCheck.Username,
+		"expiring": time.Now().Add(time.Hour * 72).Unix(),
+	})
+	user.Token, err = token.SignedString([]byte(JWTSecretKey))
+	if err != nil {
+		c.StatusCode(iris.StatusInternalServerError)
+		c.JSON(iris.Map{
+			"error": "Sorry, error while signing Token",
+		})
+		return
+	}
+
+	cn.JWT = user.Token
 	c.StatusCode(iris.StatusOK)
 	c.JSON(iris.Map{
-		"OK":       "User connected",
-		"username": user.Username,
+		"OK":    "User connected",
+		"token": user.Token,
 	})
+
 }

@@ -7,27 +7,30 @@ import (
 
 //GetAllPersons ... GET
 func (cn *Controller) GetAllPersons(c iris.Context) {
-	var persons []models.Person
 
-	_, err := cn.DB.Query(&persons, "SELECT * FROM person")
-	if err != nil {
-		c.Values().Set("error", "Selecting persons failed. "+err.Error())
-		c.StatusCode(iris.StatusInternalServerError)
-		return
-	}
+	if cn.checkJWT(c) {
+		var persons []models.Person
 
-	if len(persons) == 0 {
-		c.StatusCode(iris.StatusBadRequest)
+		_, err := cn.DB.Query(&persons, "SELECT * FROM person")
+		if err != nil {
+			c.Values().Set("error", "Selecting persons failed. "+err.Error())
+			c.StatusCode(iris.StatusInternalServerError)
+			return
+		}
+
+		if len(persons) == 0 {
+			c.StatusCode(iris.StatusBadRequest)
+			c.JSON(iris.Map{
+				"error": "No person in the databse",
+			})
+			return
+		}
+
+		c.StatusCode(iris.StatusOK)
 		c.JSON(iris.Map{
-			"error": "No person in the databse",
+			"people": persons,
 		})
-		return
 	}
-
-	c.StatusCode(iris.StatusOK)
-	c.JSON(iris.Map{
-		"people": persons,
-	})
 }
 
 //GetPersonByID ... GET
@@ -63,7 +66,7 @@ func (cn *Controller) CreatePerson(c iris.Context) {
 		c.Values().Set("error", "Creating person, read and parse form failed. "+err.Error())
 		return
 	}
-	_, err := cn.DB.QueryOne(&person, "INSERT INTO person VALUES (?, ?) RETURNING id ", person.Firstname, person.Lastname, &person)
+	_, err := cn.DB.QueryOne(&person, "INSERT INTO person (firstname, lastname) VALUES (?, ?) RETURNING id ", person.Firstname, person.Lastname, &person)
 	if err != nil {
 		panic(err)
 	}

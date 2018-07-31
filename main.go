@@ -2,8 +2,9 @@ package main
 
 import (
 	"github.com/AliceEmer/API-IRIS/controllers"
-	"github.com/go-pg/pg"
 	"github.com/kataras/iris"
+
+	"github.com/go-pg/pg"
 )
 
 func main() {
@@ -17,12 +18,13 @@ func main() {
 	cn := &controllers.Controller{DB: db}
 
 	app := iris.Default()
-	//Routing group
 
 	app.Post("/signup", cn.SignUp)
 	app.Post("/signin", cn.SignIn)
 
+	//Routing group
 	api := app.Party("/api", apiMiddleware)
+
 	api.Get("/persons", cn.GetAllPersons)
 	api.Get("/persons/{id:int}", cn.GetPersonByID)
 	api.Post("/persons", cn.CreatePerson)
