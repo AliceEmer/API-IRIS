@@ -7,6 +7,8 @@ import (
 	"github.com/go-pg/pg"
 )
 
+var cn = &controllers.Controller{}
+
 func main() {
 
 	db := pg.Connect(&pg.Options{
@@ -15,7 +17,7 @@ func main() {
 		Database: "persons",
 	})
 
-	cn := &controllers.Controller{DB: db}
+	cn.DB = db
 
 	app := iris.Default()
 
@@ -35,7 +37,10 @@ func main() {
 
 }
 
-func apiMiddleware(ctx iris.Context) {
+//No access to api/ if the JWT is not created or not valid
+func apiMiddleware(c iris.Context) {
 	// [...]
-	ctx.Next() // to move to the next handler, or don't that if you have any auth logic.
+	if cn.CheckJWT(c) {
+		c.Next()
+	}
 }

@@ -19,7 +19,8 @@ const (
 	JWTSecretKey = "SigningKey"
 )
 
-func (cn *Controller) checkJWT(c iris.Context) bool {
+//CheckJWT ... Veryfying that the JWT is valid
+func (cn *Controller) CheckJWT(c iris.Context) bool {
 
 	if cn.JWT == "" {
 		c.StatusCode(iris.StatusInternalServerError)
@@ -27,6 +28,7 @@ func (cn *Controller) checkJWT(c iris.Context) bool {
 			"error": "Sorry, you need to login first",
 		})
 		return false
+
 	}
 	token, err := jwt.Parse(cn.JWT, func(token *jwt.Token) (interface{}, error) {
 		// Don't forget to validate the alg is what you expect:

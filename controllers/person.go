@@ -1,6 +1,8 @@
 package controllers
 
 import (
+	"fmt"
+
 	"github.com/AliceEmer/API-IRIS/models"
 	"github.com/kataras/iris"
 )
@@ -8,29 +10,27 @@ import (
 //GetAllPersons ... GET
 func (cn *Controller) GetAllPersons(c iris.Context) {
 
-	if cn.checkJWT(c) {
-		var persons []models.Person
+	var persons []models.Person
 
-		_, err := cn.DB.Query(&persons, "SELECT * FROM person")
-		if err != nil {
-			c.Values().Set("error", "Selecting persons failed. "+err.Error())
-			c.StatusCode(iris.StatusInternalServerError)
-			return
-		}
-
-		if len(persons) == 0 {
-			c.StatusCode(iris.StatusBadRequest)
-			c.JSON(iris.Map{
-				"error": "No person in the databse",
-			})
-			return
-		}
-
-		c.StatusCode(iris.StatusOK)
-		c.JSON(iris.Map{
-			"people": persons,
-		})
+	_, err := cn.DB.Query(&persons, "SELECT * FROM person")
+	if err != nil {
+		c.Values().Set("error", "Selecting persons failed. "+err.Error())
+		c.StatusCode(iris.StatusInternalServerError)
+		return
 	}
+
+	if len(persons) == 0 {
+		c.StatusCode(iris.StatusBadRequest)
+		c.JSON(iris.Map{
+			"error": "No person in the databse",
+		})
+		return
+	}
+
+	c.StatusCode(iris.StatusOK)
+	c.JSON(iris.Map{
+		"people": persons,
+	})
 }
 
 //GetPersonByID ... GET
@@ -42,9 +42,10 @@ func (cn *Controller) GetPersonByID(c iris.Context) {
 
 	_, err := cn.DB.QueryOne(&person, "SELECT * FROM person WHERE id = ?", personID)
 	if err != nil {
+		fmt.Printf("ERROR : %v \n", err)
 		c.StatusCode(iris.StatusBadRequest)
 		c.JSON(iris.Map{
-			"error": "No person with this ID in the databse",
+			"error": "No person with this ID in the database",
 		})
 		return
 	}
