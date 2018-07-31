@@ -17,15 +17,16 @@ func main() {
 		Password: "password",
 		Database: "persons",
 	})
+	defer db.Close()
 
 	cn.DB = db
 
 	app := iris.New()
 
 	crs := cors.New(cors.Options{
-		AllowedOrigins:   []string{"*"}, // allows everything, use that to change the hosts.
+		AllowedOrigins:   []string{"*"},
 		AllowCredentials: true,
-		AllowedMethods:   []string{"Get", "Post", "Delete", "PUT"},
+		AllowedMethods:   []string{"Get", "Post", "Delete", "Put"},
 	})
 
 	app.Post("/signup", cn.SignUp, crs)
@@ -35,8 +36,8 @@ func main() {
 	api := app.Party("/api", apiMiddleware, crs)
 
 	api.Get("/persons", cn.GetAllPersons)
-	api.Get("/persons/{id:int}", cn.GetPersonByID)
-	api.Post("/persons", cn.CreatePerson)
+	api.Get("/person/{id:int}", cn.GetPersonByID)
+	api.Post("/addperson", cn.CreatePerson)
 	api.Delete("/deleteperson/{id:int}", cn.DeletePerson)
 
 	// Listen and serve on http://localhost:8080.

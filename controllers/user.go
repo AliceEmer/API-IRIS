@@ -14,6 +14,7 @@ import (
 func (cn *Controller) SignUp(c iris.Context) {
 
 	user := models.User{}
+	var usernameCheck int
 
 	if err := c.ReadJSON(&user); err != nil {
 		c.StatusCode(iris.StatusInternalServerError)
@@ -27,9 +28,33 @@ func (cn *Controller) SignUp(c iris.Context) {
 		user.Password = string(hashedPassword)
 	}
 
-	_, err := cn.DB.QueryOne(&user, "INSERT INTO users (username, password) VALUES (?, ?) RETURNING * ", user.Username, user.Password, &user)
+	//Check that the needed data have been populated
+	if user.Username == "" || user.Password == "" {
+		c.StatusCode(iris.StatusBadRequest)
+		c.JSON(iris.Map{
+			"error": "Please enter a username and password to sign up",
+		})
+		return
+	}
+
+	//Check that the username doesn't already exist
+	_, err := cn.DB.QueryOne(&usernameCheck, "SELECT id FROM users WHERE username = ?", user.Username)
 	if err != nil {
-		panic(err)
+		if err != pg.ErrNoRows {
+			panic(err)
+		}
+	} else {
+		c.StatusCode(iris.StatusBadRequest)
+		c.JSON(iris.Map{
+			"error": "Username already used, please choose something else",
+		})
+		return
+	}
+
+	//Insertion of the new user in DB
+	_, error := cn.DB.QueryOne(&user, "INSERT INTO users (username, password) VALUES (?, ?) RETURNING * ", user.Username, user.Password, &user)
+	if error != nil {
+		panic(error)
 	}
 
 	c.StatusCode(iris.StatusOK)
@@ -53,6 +78,16 @@ func (cn *Controller) SignIn(c iris.Context) {
 		return
 	}
 
+	//Check that the needed data have been populated
+	if user.Username == "" || user.Password == "" {
+		c.StatusCode(iris.StatusBadRequest)
+		c.JSON(iris.Map{
+			"error": "Please enter a username and password to sign in",
+		})
+		return
+	}
+
+	//Check that the username and password exist in DB
 	_, err := cn.DB.QueryOne(&userCheck, "SELECT id, username, password FROM users WHERE username = ?", user.Username)
 	if err != nil {
 		if err == pg.ErrNoRows {
@@ -64,6 +99,7 @@ func (cn *Controller) SignIn(c iris.Context) {
 		}
 	}
 
+	//Password encryption
 	if bcrypt.CompareHashAndPassword([]byte(userCheck.Password), []byte(user.Password)) != nil {
 		c.StatusCode(iris.StatusBadRequest)
 		c.JSON(iris.Map{
@@ -72,9 +108,7 @@ func (cn *Controller) SignIn(c iris.Context) {
 		return
 	}
 
-	// https://github.com/dgrijalva/jwt-go
-	// Create a new token object, specifying signing method and the claims
-
+	//Creation of the JWT
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"id":       userCheck.ID,
 		"username": userCheck.Username,
