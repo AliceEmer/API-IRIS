@@ -16,6 +16,7 @@ func (cn *Controller) SignUp(c iris.Context) {
 	user := models.User{}
 	var usernameCheck int
 
+	//Reading JSON data
 	if err := c.ReadJSON(&user); err != nil {
 		c.StatusCode(iris.StatusInternalServerError)
 		c.JSON(iris.Map{
@@ -70,6 +71,7 @@ func (cn *Controller) SignIn(c iris.Context) {
 	user := models.User{}
 	userCheck := models.User{}
 
+	//Reading JSON data
 	if err := c.ReadJSON(&user); err != nil {
 		c.StatusCode(iris.StatusInternalServerError)
 		c.JSON(iris.Map{
