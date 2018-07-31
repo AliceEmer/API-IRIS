@@ -13,7 +13,7 @@ func (cn *Controller) GetAddressByPerson(c iris.Context) {
 
 	//Check that the person_id correspond to a person in DB
 	var person models.Person
-	_, e := cn.DB.QueryOne(&person, "SELECT * FROM person WHERE id = ?", personID)
+	_, e := cn.DB.QueryOne(&person, "SELECT * FROM persons WHERE id = ?", personID)
 	if e != nil {
 		if e == pg.ErrNoRows {
 			c.StatusCode(iris.StatusBadRequest)
@@ -26,7 +26,7 @@ func (cn *Controller) GetAddressByPerson(c iris.Context) {
 	}
 
 	var address []models.Address
-	_, err := cn.DB.Query(&address, "SELECT * FROM address WHERE person_id = ?", personID)
+	_, err := cn.DB.Query(&address, "SELECT * FROM addresses WHERE person_id = ?", personID)
 	if err != nil {
 		if err == pg.ErrNoRows {
 			c.StatusCode(iris.StatusBadRequest)
@@ -36,6 +36,15 @@ func (cn *Controller) GetAddressByPerson(c iris.Context) {
 			return
 		}
 		panic(err)
+	}
+
+	//Check that the address map is not empty
+	if len(address) == 0 {
+		c.StatusCode(iris.StatusBadRequest)
+		c.JSON(iris.Map{
+			"error": "No address for a person with this ID in the database",
+		})
+		return
 	}
 
 	c.StatusCode(iris.StatusOK)
@@ -52,7 +61,7 @@ func (cn *Controller) CreateAddress(c iris.Context) {
 
 	//Check that the person_id correspond to a person in DB
 	var person models.Person
-	_, e := cn.DB.QueryOne(&person, "SELECT * FROM person WHERE id = ?", personID)
+	_, e := cn.DB.QueryOne(&person, "SELECT * FROM persons WHERE id = ?", personID)
 	if e != nil {
 		if e == pg.ErrNoRows {
 			c.StatusCode(iris.StatusBadRequest)
@@ -81,7 +90,7 @@ func (cn *Controller) CreateAddress(c iris.Context) {
 		return
 	}
 
-	_, err := cn.DB.QueryOne(&address, "INSERT INTO address(city, state, person_id)  VALUES (?, ?, ?) RETURNING * ", address.City, address.State, personID, &address)
+	_, err := cn.DB.QueryOne(&address, "INSERT INTO addresses(city, state, person_id)  VALUES (?, ?, ?) RETURNING * ", address.City, address.State, personID, &address)
 	if err != nil {
 		panic(err)
 	}
@@ -101,7 +110,7 @@ func (cn *Controller) DeleteAddress(c iris.Context) {
 
 	//Check that the person_id correspond to a person in DB
 	var person models.Person
-	_, e := cn.DB.QueryOne(&person, "SELECT * FROM person WHERE id = ?", personID)
+	_, e := cn.DB.QueryOne(&person, "SELECT * FROM persons WHERE id = ?", personID)
 	if e != nil {
 		if e == pg.ErrNoRows {
 			c.StatusCode(iris.StatusBadRequest)
@@ -113,7 +122,7 @@ func (cn *Controller) DeleteAddress(c iris.Context) {
 		panic(e)
 	}
 
-	_, err := cn.DB.Exec("DELETE FROM address WHERE person_id = ?", personID)
+	_, err := cn.DB.Exec("DELETE FROM addresses WHERE person_id = ?", personID)
 	if err != nil {
 		panic(err)
 	}

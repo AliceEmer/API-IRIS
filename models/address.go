@@ -1,5 +1,6 @@
 package models
 
+//Address ...
 type Address struct {
 	ID       string `json:"id,omitempty"`
 	City     string `json:"city,omitempty"`

@@ -11,7 +11,7 @@ func (cn *Controller) GetAllPersons(c iris.Context) {
 
 	var persons []models.Person
 
-	_, err := cn.DB.Query(&persons, "SELECT * FROM person")
+	_, err := cn.DB.Query(&persons, "SELECT * FROM persons")
 	if err != nil {
 		if err == pg.ErrNoRows {
 			c.StatusCode(iris.StatusBadRequest)
@@ -36,7 +36,7 @@ func (cn *Controller) GetPersonByID(c iris.Context) {
 	var person models.Person
 
 	//Check that a person with the ID populated exist in the DB
-	_, err := cn.DB.QueryOne(&person, "SELECT * FROM person WHERE id = ?", personID)
+	_, err := cn.DB.QueryOne(&person, "SELECT * FROM persons WHERE id = ?", personID)
 	if err != nil {
 		if err == pg.ErrNoRows {
 			c.StatusCode(iris.StatusBadRequest)
@@ -75,7 +75,7 @@ func (cn *Controller) CreatePerson(c iris.Context) {
 		return
 	}
 
-	_, err := cn.DB.QueryOne(&person, "INSERT INTO person (firstname, lastname) VALUES (?, ?) RETURNING id ", person.Firstname, person.Lastname, &person)
+	_, err := cn.DB.QueryOne(&person, "INSERT INTO persons (firstname, lastname) VALUES (?, ?) RETURNING id ", person.Firstname, person.Lastname, &person)
 	if err != nil {
 		panic(err)
 	}
@@ -94,7 +94,7 @@ func (cn *Controller) DeletePerson(c iris.Context) {
 
 	personID, _ := c.Params().GetInt("id")
 
-	_, err := cn.DB.Exec("DELETE FROM person WHERE id = ? RETURNING * ", personID)
+	_, err := cn.DB.Exec("DELETE FROM persons WHERE id = ? RETURNING * ", personID)
 	if err != nil {
 		panic(err)
 	}
