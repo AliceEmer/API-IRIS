@@ -72,7 +72,6 @@ func (cn *Controller) SignUp(c iris.Context) {
 		})
 		return
 	}
-	cn.JWT = user.Token
 
 	c.StatusCode(iris.StatusOK)
 	c.JSON(iris.Map{
@@ -83,7 +82,7 @@ func (cn *Controller) SignUp(c iris.Context) {
 }
 
 //SignIn ... POST
-func (cn *Controller) SignIn(c iris.Context) {
+func (cn *Controller) LogIn(c iris.Context) {
 
 	user := models.User{}
 	userCheck := models.User{}
@@ -141,7 +140,6 @@ func (cn *Controller) SignIn(c iris.Context) {
 		})
 		return
 	}
-	cn.JWT = user.Token
 
 	c.StatusCode(iris.StatusOK)
 	c.JSON(iris.Map{

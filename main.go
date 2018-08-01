@@ -2,7 +2,9 @@ package main
 
 import (
 	"github.com/AliceEmer/API-IRIS/controllers"
-	//jwtmiddleware "github.com/iris-contrib/middleware/jwt"
+	jwt "github.com/dgrijalva/jwt-go"
+	jwtmiddleware "github.com/iris-contrib/middleware/jwt"
+
 	"github.com/iris-contrib/middleware/cors"
 	"github.com/kataras/iris"
 
@@ -30,16 +32,23 @@ func main() {
 		AllowCredentials: true,
 		AllowedMethods:   []string{"Get", "Post", "Delete", "Put"},
 	})
+	app.Use(crs)
 
 	//Authentification
-	app.Post("/signup", cn.SignUp, crs)
-	app.Post("/signin", cn.SignIn, crs)
+	app.Post("/signup", cn.SignUp)
+	app.Post("/login", cn.LogIn)
+
+	//JWT
+	myJwtMiddleware := jwtmiddleware.New(jwtmiddleware.Config{
+		ValidationKeyGetter: func(token *jwt.Token) (interface{}, error) {
+			return []byte(controllers.JWTSecretKey), nil
+		},
+		SigningMethod: jwt.SigningMethodHS256,
+	})
 
 	//Routing group api
-	api := app.Party("/api", apiMiddleware, crs)
-
-	/*api.Use(jwtmiddleware.Config{
-	})*/
+	api := app.Party("/api")
+	api.Use(myJwtMiddleware.Serve)
 
 	api.Get("/persons", cn.GetAllPersons)
 	api.Get("/person/{id:int}", cn.GetPersonByID)
@@ -54,11 +63,4 @@ func main() {
 	// Listen and serve on http://localhost:8080.
 	app.Run(iris.Addr(":8080"))
 
-}
-
-//No access to api/ if the JWT is not created or not valid
-func apiMiddleware(c iris.Context) {
-	if cn.CheckJWT(c) {
-		c.Next()
-	}
 }
