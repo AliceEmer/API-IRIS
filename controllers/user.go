@@ -81,7 +81,7 @@ func (cn *Controller) SignUp(c iris.Context) {
 	})
 }
 
-//SignIn ... POST
+//LogIn ... POST
 func (cn *Controller) LogIn(c iris.Context) {
 
 	user := models.User{}

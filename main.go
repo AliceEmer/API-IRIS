@@ -11,15 +11,22 @@ import (
 	"github.com/go-pg/pg"
 )
 
+//DB connexion variables
+const (
+	UserDB     = "aliceecourtemer"
+	PasswordDB = "password"
+	NameDB     = "persons"
+)
+
 var cn = &controllers.Controller{}
 
 func main() {
 
 	//DB connection
 	db := pg.Connect(&pg.Options{
-		User:     "aliceecourtemer",
-		Password: "password",
-		Database: "persons",
+		User:     UserDB,
+		Password: PasswordDB,
+		Database: NameDB,
 	})
 	defer db.Close()
 	cn.DB = db
