@@ -58,10 +58,27 @@ func (cn *Controller) SignUp(c iris.Context) {
 		panic(error)
 	}
 
+	//Creation of the JWT
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"id":       user.ID,
+		"username": user.Username,
+		"expiring": time.Now().Add(time.Hour * 72).Unix(),
+	})
+	user.Token, err = token.SignedString([]byte(JWTSecretKey))
+	if err != nil {
+		c.StatusCode(iris.StatusInternalServerError)
+		c.JSON(iris.Map{
+			"error": "Sorry, error while signing Token",
+		})
+		return
+	}
+	cn.JWT = user.Token
+
 	c.StatusCode(iris.StatusOK)
 	c.JSON(iris.Map{
 		"id":       user.ID,
 		"username": user.Username,
+		"token":    user.Token,
 	})
 }
 
@@ -124,8 +141,8 @@ func (cn *Controller) SignIn(c iris.Context) {
 		})
 		return
 	}
-
 	cn.JWT = user.Token
+
 	c.StatusCode(iris.StatusOK)
 	c.JSON(iris.Map{
 		"OK":    "User connected",

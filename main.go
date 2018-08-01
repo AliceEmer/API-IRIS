@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/AliceEmer/API-IRIS/controllers"
+	//jwtmiddleware "github.com/iris-contrib/middleware/jwt"
 	"github.com/iris-contrib/middleware/cors"
 	"github.com/kataras/iris"
 
@@ -36,6 +37,9 @@ func main() {
 
 	//Routing group api
 	api := app.Party("/api", apiMiddleware, crs)
+
+	/*api.Use(jwtmiddleware.Config{
+	})*/
 
 	api.Get("/persons", cn.GetAllPersons)
 	api.Get("/person/{id:int}", cn.GetPersonByID)
