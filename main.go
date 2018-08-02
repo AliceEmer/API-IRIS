@@ -18,8 +18,6 @@ const (
 	NameDB     = "persons"
 )
 
-var cn = &controllers.Controller{}
-
 func main() {
 
 	//DB connection
@@ -29,6 +27,9 @@ func main() {
 		Database: NameDB,
 	})
 	defer db.Close()
+
+	//Controller holding DB connection
+	var cn = &controllers.Controller{}
 	cn.DB = db
 
 	app := iris.New()
@@ -41,21 +42,33 @@ func main() {
 	})
 	app.Use(crs)
 
-	//Authentification
-	app.Post("/signup", cn.SignUp)
-	app.Post("/login", cn.LogIn)
-
-	//JWT
-	myJwtMiddleware := jwtmiddleware.New(jwtmiddleware.Config{
+	//JWT middleware
+	jwtMiddleware := jwtmiddleware.New(jwtmiddleware.Config{
 		ValidationKeyGetter: func(token *jwt.Token) (interface{}, error) {
 			return []byte(controllers.JWTSecretKey), nil
 		},
 		SigningMethod: jwt.SigningMethodHS256,
 	})
 
+	//AdminCheck middleware
+	adminMiddleware := func(c iris.Context) {
+		userToken := jwtMiddleware.Get(c)
+		claims, _ := userToken.Claims.(jwt.MapClaims)
+		if claims["role"].(float64) == 0 {
+			c.StatusCode(iris.StatusUnauthorized)
+			c.JSON(iris.Map{"error": "You don't have enough rights to access to this page"})
+			return
+		}
+		c.Next()
+	}
+
+	//Authentification
+	app.Post("/signup", cn.SignUp)
+	app.Post("/login", cn.LogIn)
+
 	//Routing group api
 	api := app.Party("/api")
-	api.Use(myJwtMiddleware.Serve)
+	api.Use(jwtMiddleware.Serve)
 
 	api.Get("/persons", cn.GetAllPersons)
 	api.Get("/person/{id:int}", cn.GetPersonByID)
@@ -64,8 +77,12 @@ func main() {
 	api.Post("/addperson", cn.CreatePerson)
 	api.Post("/addaddress/{id:int}", cn.CreateAddress)
 
-	api.Delete("/deleteperson/{id:int}", cn.DeletePerson)
-	api.Delete("/deleteaddress/{id:int}", cn.DeleteAddress)
+	//Routing group admin
+	admin := api.Party("/admin")
+	admin.Use(adminMiddleware)
+
+	admin.Delete("/deleteperson/{id:int}", cn.DeletePerson)
+	admin.Delete("/deleteaddress/{id:int}", cn.DeleteAddress)
 
 	// Listen and serve on http://localhost:8080.
 	app.Run(iris.Addr(":8080"))

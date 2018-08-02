@@ -4,7 +4,8 @@ CREATE TABLE if not exists users (
     id SERIAL PRIMARY KEY UNIQUE,
     username character varying(50) NOT NULL UNIQUE,
     password character varying(100) NOT NULL,
-    email text NOT NULL UNIQUE
+    email text NOT NULL UNIQUE,
+    role integer DEFAULT 0
 );
 
 -- Indices --
