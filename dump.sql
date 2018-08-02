@@ -1,15 +1,18 @@
 -- USERS Table Definition ----------------------------------------------
 
 CREATE TABLE if not exists users (
-    id SERIAL PRIMARY KEY,
-    username character varying(50) NOT NULL,
-    password character varying(100) NOT NULL
+    id SERIAL PRIMARY KEY UNIQUE,
+    username character varying(50) NOT NULL UNIQUE,
+    password character varying(100) NOT NULL,
+    email text NOT NULL UNIQUE
 );
 
 -- Indices --
 
 CREATE UNIQUE INDEX user_id_key ON users(id);
 CREATE UNIQUE INDEX user_username_key ON users(username);
+CREATE UNIQUE INDEX users_email_key ON users(email text_ops);
+
 
 -- Table Definition ----------------------------------------------
 

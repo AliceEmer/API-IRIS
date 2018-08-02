@@ -30,10 +30,10 @@ func (cn *Controller) SignUp(c iris.Context) {
 	}
 
 	//Check that the needed data have been populated
-	if user.Username == "" || user.Password == "" {
+	if user.Username == "" || user.Password == "" || user.Email == "" {
 		c.StatusCode(iris.StatusBadRequest)
 		c.JSON(iris.Map{
-			"error": "Please enter a username and password to sign up",
+			"error": "Please enter a username, a password and an email to sign up",
 		})
 		return
 	}
@@ -52,8 +52,22 @@ func (cn *Controller) SignUp(c iris.Context) {
 		return
 	}
 
+	//Check that the email doesn't already exist
+	_, err = cn.DB.QueryOne(&usernameCheck, "SELECT id FROM users WHERE email = ?", user.Email)
+	if err != nil {
+		if err != pg.ErrNoRows {
+			panic(err)
+		}
+	} else {
+		c.StatusCode(iris.StatusBadRequest)
+		c.JSON(iris.Map{
+			"error": "An account already exist with this email",
+		})
+		return
+	}
+
 	//Insertion of the new user in DB
-	_, error := cn.DB.QueryOne(&user, "INSERT INTO users (username, password) VALUES (?, ?) RETURNING * ", user.Username, user.Password, &user)
+	_, error := cn.DB.QueryOne(&user, "INSERT INTO users (username, password, email) VALUES (?, ?, ?) RETURNING * ", user.Username, user.Password, user.Email, &user)
 	if error != nil {
 		panic(error)
 	}
@@ -62,6 +76,7 @@ func (cn *Controller) SignUp(c iris.Context) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"id":       user.ID,
 		"username": user.Username,
+		"email":    user.Email,
 		"expiring": time.Now().Add(time.Hour * 72).Unix(),
 	})
 	user.Token, err = token.SignedString([]byte(JWTSecretKey))
@@ -77,6 +92,7 @@ func (cn *Controller) SignUp(c iris.Context) {
 	c.JSON(iris.Map{
 		"id":       user.ID,
 		"username": user.Username,
+		"email":    user.Email,
 		"token":    user.Token,
 	})
 }
@@ -130,6 +146,7 @@ func (cn *Controller) LogIn(c iris.Context) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"id":       userCheck.ID,
 		"username": userCheck.Username,
+		"email":    userCheck.Email,
 		"expiring": time.Now().Add(time.Hour * 72).Unix(),
 	})
 	user.Token, err = token.SignedString([]byte(JWTSecretKey))
