@@ -71,13 +71,10 @@ func main() {
 	api.Use(jwtMiddleware.Serve)
 
 	api.Post("/user/{id:int}/emailverif", cn.EmailVerification)
-
 	api.Put("/user/{id:int}/resetpassword", cn.UpdatePassword)
-
 	api.Get("/persons", cn.GetAllPersons)
 	api.Get("/person/{id:int}", cn.GetPersonByID)
 	api.Get("/person/{id:int}/address", cn.GetAddressByPerson)
-
 	api.Post("/addperson", cn.CreatePerson)
 	api.Post("/addaddress/{id:int}", cn.CreateAddress)
 
@@ -86,8 +83,7 @@ func main() {
 	admin.Use(adminMiddleware)
 
 	admin.Put("/user/{id:int}/resetrole", cn.UpdateRole)
-	//admin.Put("/deleteuser/{id:int}", cn.DeleteUser)
-
+	admin.Delete("/deleteuser/{id:int}", cn.DeleteUser)
 	admin.Delete("/deleteperson/{id:int}", cn.DeletePerson)
 	admin.Delete("/deleteaddress/{id:int}", cn.DeleteAddress)
 

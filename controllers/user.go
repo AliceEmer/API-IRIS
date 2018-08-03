@@ -4,15 +4,18 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/AliceEmer/API-IRIS/models"
+	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/go-pg/pg"
+	jwtmiddleware "github.com/iris-contrib/middleware/jwt"
 	mailer "github.com/kataras/go-mailer"
 	"github.com/kataras/iris"
 	"golang.org/x/crypto/bcrypt"
 )
 
-//UpdatePassword ... TODO: Invalid the JWT
+//UpdatePassword ...
 func (cn *Controller) UpdatePassword(c iris.Context) {
 	userID, _ := c.Params().GetInt("id")
 
@@ -69,13 +72,25 @@ func (cn *Controller) UpdatePassword(c iris.Context) {
 		return
 	}
 
+	//Invalid token
+	jwtMiddleware := jwtmiddleware.New(jwtmiddleware.Config{
+		ValidationKeyGetter: func(token *jwt.Token) (interface{}, error) {
+			return []byte(JWTSecretKey), nil
+		},
+		SigningMethod: jwt.SigningMethodHS256,
+	})
+
+	userToken := jwtMiddleware.Get(c)
+	claims, _ := userToken.Claims.(jwt.MapClaims)
+	claims["expiring"] = time.Now() //not sure if it's enough
+
 	c.StatusCode(iris.StatusOK)
 	c.JSON(iris.Map{
-		"OK": "Password updated",
+		"OK": "Password updated, you need to login again with your new password",
 	})
 }
 
-//UpdateRole ... TODO: Invalid the JWT
+//UpdateRole ...
 func (cn *Controller) UpdateRole(c iris.Context) {
 	userID, _ := c.Params().GetInt("id")
 	user := models.User{}
@@ -89,7 +104,7 @@ func (cn *Controller) UpdateRole(c iris.Context) {
 		return
 	}
 
-	//If correct old passowrd, insertion of the new one in the DB
+	//Insertion of the new role in DB
 	_, err := cn.DB.Exec("UPDATE users SET role = ? WHERE id = ?", user.Role, userID)
 	if err != nil {
 		c.StatusCode(iris.StatusBadRequest)
@@ -103,7 +118,20 @@ func (cn *Controller) UpdateRole(c iris.Context) {
 	})
 }
 
-//SendValidationMail ... Sending the UUID
+//DeleteUser ... DELETE
+func (cn *Controller) DeleteUser(c iris.Context) {
+
+	userID, _ := c.Params().GetInt("id")
+	_, err := cn.DB.Exec("DELETE FROM users WHERE id = ? RETURNING * ", userID)
+	if err != nil {
+		panic(err)
+	}
+
+	c.StatusCode(iris.StatusOK)
+	c.JSON(iris.Map{"message": "User deleted"})
+}
+
+//SendValidationMail ... Sending the UUID - Using Ethereal for now
 func (cn *Controller) SendValidationMail(c iris.Context, user *models.User) {
 
 	config := mailer.Config{
