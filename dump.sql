@@ -18,7 +18,7 @@ CREATE UNIQUE INDEX user_username_key ON users(username);
 CREATE UNIQUE INDEX users_email_key ON users(email text_ops);
 
 
--- Table Definition ----------------------------------------------
+-- Persons Table Definition ----------------------------------------------
 
 CREATE TABLE if not exists persons (
     id SERIAL PRIMARY KEY UNIQUE
