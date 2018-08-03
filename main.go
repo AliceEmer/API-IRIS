@@ -85,7 +85,7 @@ func main() {
 	admin := api.Party("/admin")
 	admin.Use(adminMiddleware)
 
-	//admin.Put("/user/{id:int}/resetrole", cn.UpdateRole)
+	admin.Put("/user/{id:int}/resetrole", cn.UpdateRole)
 	//admin.Put("/deleteuser/{id:int}", cn.DeleteUser)
 
 	admin.Delete("/deleteperson/{id:int}", cn.DeletePerson)

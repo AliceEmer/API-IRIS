@@ -3,165 +3,14 @@ package controllers
 import (
 	"fmt"
 	"os/exec"
-	"regexp"
 	"strings"
-	"time"
 
 	"github.com/AliceEmer/API-IRIS/models"
-	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/go-pg/pg"
 	mailer "github.com/kataras/go-mailer"
 	"github.com/kataras/iris"
 	"golang.org/x/crypto/bcrypt"
 )
-
-var (
-	emailRegexp = regexp.MustCompile("^[a-z0-9._-]+@[a-z0-9._-]{2,}\\.[a-z]{2,4}$")
-)
-
-//SignUp ... POST
-func (cn *Controller) SignUp(c iris.Context) {
-
-	user := models.User{}
-	var usernameCheck int
-
-	//Reading JSON data
-	if err := c.ReadJSON(&user); err != nil {
-		c.StatusCode(iris.StatusInternalServerError)
-		c.JSON(iris.Map{
-			"error": "creating user, read and parse form failed. " + err.Error(),
-		})
-		return
-	}
-
-	//Check that the needed data have been populated
-	if user.Username == "" || user.Password == "" || user.Email == "" {
-		c.StatusCode(iris.StatusBadRequest)
-		c.JSON(iris.Map{
-			"error": "Please enter a username, a password and an email to sign up",
-		})
-		return
-	}
-
-	//Check that the username doesn't already exist
-	_, err := cn.DB.QueryOne(&usernameCheck, "SELECT id FROM users WHERE username = ?", user.Username)
-	if err != nil {
-		if err != pg.ErrNoRows {
-			panic(err)
-		}
-	} else {
-		c.StatusCode(iris.StatusBadRequest)
-		c.JSON(iris.Map{
-			"error": "Username already used, please choose something else",
-		})
-		return
-	}
-
-	//Check that the email has a correct format
-	isValid := ValidateFormat(user.Email)
-	if isValid != true {
-		c.StatusCode(iris.StatusBadRequest)
-		c.JSON(iris.Map{"error": "Your email doesn't have a correct format"})
-		return
-	}
-
-	//Check that the email doesn't already exist
-	_, err = cn.DB.QueryOne(&usernameCheck, "SELECT id FROM users WHERE email = ?", user.Email)
-	if err != nil {
-		if err != pg.ErrNoRows {
-			panic(err)
-		}
-	} else {
-		c.StatusCode(iris.StatusBadRequest)
-		c.JSON(iris.Map{"error": "An account already exist with this email"})
-		return
-	}
-
-	//If everything is ok, hashing the password
-	saltedPassword := user.Password + SecretSalt
-	hashedPassword, e := bcrypt.GenerateFromPassword([]byte(saltedPassword), 8)
-	if e == nil {
-		user.Password = string(hashedPassword)
-	}
-
-	//Insertion of the new user in DB
-	_, error := cn.DB.QueryOne(&user, "INSERT INTO users (username, password, email, role) VALUES (?, ?, ?, ?) RETURNING * ", user.Username, user.Password, user.Email, user.Role, &user)
-	if error != nil {
-		c.StatusCode(iris.StatusInternalServerError)
-		c.JSON(iris.Map{"error": "Issue faced when insertin the new user"})
-		return
-	}
-
-	//Send the email to the user
-	cn.SendValidationMail(c, &user)
-
-}
-
-//LogIn ... POST
-func (cn *Controller) LogIn(c iris.Context) {
-
-	user := models.User{}
-	userCheck := models.User{}
-
-	//Reading JSON data
-	if err := c.ReadJSON(&user); err != nil {
-		c.StatusCode(iris.StatusInternalServerError)
-		c.JSON(iris.Map{"error": "creating user, read and parse form failed. " + err.Error()})
-		return
-	}
-
-	//Check that the needed data have been populated
-	if user.Username == "" || user.Password == "" {
-		c.StatusCode(iris.StatusBadRequest)
-		c.JSON(iris.Map{"error": "Please enter a username and password to login"})
-		return
-	}
-
-	//Check that the username and password exist in DB
-	_, err := cn.DB.QueryOne(&userCheck, "SELECT id, username, password, role FROM users WHERE username = ?", user.Username)
-	if err != nil {
-		if err == pg.ErrNoRows {
-			c.StatusCode(iris.StatusBadRequest)
-			c.JSON(iris.Map{"error": "This username doesn't exist, please sign up before"})
-			return
-		}
-	}
-
-	//Check Password
-	if bcrypt.CompareHashAndPassword([]byte(userCheck.Password), []byte(user.Password+SecretSalt)) != nil {
-		c.StatusCode(iris.StatusBadRequest)
-		c.JSON(iris.Map{"error": "Invalid username or password"})
-		return
-	}
-
-	//Creation of the JWT
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"id":       userCheck.ID,
-		"username": userCheck.Username,
-		"role":     userCheck.Role,
-		"expiring": time.Now().Add(time.Hour * 72).Unix(),
-	})
-	user.Token, err = token.SignedString([]byte(JWTSecretKey))
-	if err != nil {
-		c.StatusCode(iris.StatusInternalServerError)
-		c.JSON(iris.Map{"error": "Sorry, error while signing Token"})
-		return
-	}
-
-	c.StatusCode(iris.StatusOK)
-	c.JSON(iris.Map{
-		"OK":    "User connected",
-		"token": user.Token,
-	})
-}
-
-//ValidateFormat ... Email
-func ValidateFormat(email string) bool {
-	if !emailRegexp.MatchString(email) {
-		return false
-	}
-	return true
-}
 
 //UpdatePassword ... TODO: Invalid the JWT
 func (cn *Controller) UpdatePassword(c iris.Context) {
@@ -226,6 +75,34 @@ func (cn *Controller) UpdatePassword(c iris.Context) {
 	})
 }
 
+//UpdateRole ... TODO: Invalid the JWT
+func (cn *Controller) UpdateRole(c iris.Context) {
+	userID, _ := c.Params().GetInt("id")
+	user := models.User{}
+
+	//Reading JSON data
+	if err := c.ReadJSON(&user); err != nil {
+		c.StatusCode(iris.StatusInternalServerError)
+		c.JSON(iris.Map{
+			"error": "creating role, read and parse form failed. " + err.Error(),
+		})
+		return
+	}
+
+	//If correct old passowrd, insertion of the new one in the DB
+	_, err := cn.DB.Exec("UPDATE users SET role = ? WHERE id = ?", user.Role, userID)
+	if err != nil {
+		c.StatusCode(iris.StatusBadRequest)
+		c.JSON(iris.Map{"error": "Issue updating password: " + err.Error()})
+		return
+	}
+
+	c.StatusCode(iris.StatusOK)
+	c.JSON(iris.Map{
+		"OK": "Role updated",
+	})
+}
+
 //SendValidationMail ... Sending the UUID
 func (cn *Controller) SendValidationMail(c iris.Context, user *models.User) {
 
@@ -280,8 +157,6 @@ func (cn *Controller) EmailVerification(c iris.Context) {
 	userID, _ := c.Params().GetInt("id")
 	user := models.User{}
 	userCheck := models.User{}
-
-	//var UUID string
 
 	//Check that the user exist in DB
 	_, err := cn.DB.QueryOne(&user, "SELECT * FROM users WHERE id = ?", userID)
