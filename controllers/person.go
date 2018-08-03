@@ -15,9 +15,7 @@ func (cn *Controller) GetAllPersons(c iris.Context) {
 	if err != nil {
 		if err == pg.ErrNoRows {
 			c.StatusCode(iris.StatusBadRequest)
-			c.JSON(iris.Map{
-				"error": "No person in the database",
-			})
+			c.JSON(iris.Map{"error": "No person in the database"})
 			return
 		}
 		panic(err)
@@ -40,9 +38,7 @@ func (cn *Controller) GetPersonByID(c iris.Context) {
 	if err != nil {
 		if err == pg.ErrNoRows {
 			c.StatusCode(iris.StatusBadRequest)
-			c.JSON(iris.Map{
-				"error": "No person with this ID in the database",
-			})
+			c.JSON(iris.Map{"error": "No person with this ID in the database"})
 			return
 		}
 		panic(err)
@@ -69,9 +65,7 @@ func (cn *Controller) CreatePerson(c iris.Context) {
 	//Check that the needed data have been populated
 	if person.Firstname == "" || person.Lastname == "" {
 		c.StatusCode(iris.StatusBadRequest)
-		c.JSON(iris.Map{
-			"error": "Please enter the firstname and lastname of the new person",
-		})
+		c.JSON(iris.Map{"error": "Please enter the firstname and lastname of the new person"})
 		return
 	}
 
@@ -100,8 +94,5 @@ func (cn *Controller) DeletePerson(c iris.Context) {
 	}
 
 	c.StatusCode(iris.StatusOK)
-	c.JSON(iris.Map{
-		"message": "Person deleted",
-	})
-
+	c.JSON(iris.Map{"message": "Person deleted"})
 }

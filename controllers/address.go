@@ -17,9 +17,7 @@ func (cn *Controller) GetAddressByPerson(c iris.Context) {
 	if e != nil {
 		if e == pg.ErrNoRows {
 			c.StatusCode(iris.StatusBadRequest)
-			c.JSON(iris.Map{
-				"error": "The person populated doesn't exist. Impossible to add address",
-			})
+			c.JSON(iris.Map{"error": "The person populated doesn't exist. Impossible to add address"})
 			return
 		}
 		panic(e)
@@ -30,9 +28,7 @@ func (cn *Controller) GetAddressByPerson(c iris.Context) {
 	if err != nil {
 		if err == pg.ErrNoRows {
 			c.StatusCode(iris.StatusBadRequest)
-			c.JSON(iris.Map{
-				"error": "No address for a person with this ID in the database",
-			})
+			c.JSON(iris.Map{"error": "No address for a person with this ID in the database"})
 			return
 		}
 		panic(err)
@@ -41,9 +37,7 @@ func (cn *Controller) GetAddressByPerson(c iris.Context) {
 	//Check that the address map is not empty
 	if len(address) == 0 {
 		c.StatusCode(iris.StatusBadRequest)
-		c.JSON(iris.Map{
-			"error": "No address for a person with this ID in the database",
-		})
+		c.JSON(iris.Map{"error": "No address for a person with this ID in the database"})
 		return
 	}
 
@@ -65,9 +59,7 @@ func (cn *Controller) CreateAddress(c iris.Context) {
 	if e != nil {
 		if e == pg.ErrNoRows {
 			c.StatusCode(iris.StatusBadRequest)
-			c.JSON(iris.Map{
-				"error": "The person populated doesn't exist. Impossible to add address",
-			})
+			c.JSON(iris.Map{"error": "The person populated doesn't exist. Impossible to add address"})
 			return
 		}
 		panic(e)
@@ -84,9 +76,7 @@ func (cn *Controller) CreateAddress(c iris.Context) {
 	//Check that the needed data have been populated
 	if address.City == "" || address.State == "" {
 		c.StatusCode(iris.StatusBadRequest)
-		c.JSON(iris.Map{
-			"error": "Please enter the city and state of the new address",
-		})
+		c.JSON(iris.Map{"error": "Please enter the city and state of the new address"})
 		return
 	}
 

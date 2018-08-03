@@ -5,7 +5,10 @@ CREATE TABLE if not exists users (
     username character varying(50) NOT NULL UNIQUE,
     password character varying(100) NOT NULL,
     email text NOT NULL UNIQUE,
-    role integer DEFAULT 0
+    role integer DEFAULT 0,
+    uuid text
+    email_validated boolean DEFAULT false
+
 );
 
 -- Indices --
