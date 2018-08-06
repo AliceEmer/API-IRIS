@@ -6,9 +6,9 @@ CREATE TABLE if not exists users (
     password character varying(100) NOT NULL,
     email text NOT NULL UNIQUE,
     role integer DEFAULT 0,
-    uuid text
-    email_validated boolean DEFAULT false
-
+    uuid text,
+    email_validated boolean DEFAULT false,
+    twofa_activated boolean DEFAULT false
 );
 
 -- Indices --
@@ -18,7 +18,7 @@ CREATE UNIQUE INDEX user_username_key ON users(username);
 CREATE UNIQUE INDEX users_email_key ON users(email text_ops);
 
 
--- Table Definition ----------------------------------------------
+-- Persons Table Definition ----------------------------------------------
 
 CREATE TABLE if not exists persons (
     id SERIAL PRIMARY KEY UNIQUE

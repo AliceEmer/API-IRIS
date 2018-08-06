@@ -1,11 +1,15 @@
 package controllers
 
 import (
+	"fmt"
+	"os"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/AliceEmer/API-IRIS/models"
 	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/dgryski/dgoogauth"
 	"github.com/go-pg/pg"
 	"github.com/kataras/iris"
 	"golang.org/x/crypto/bcrypt"
@@ -14,6 +18,14 @@ import (
 var (
 	emailRegexp = regexp.MustCompile("^[a-z0-9._-]+@[a-z0-9._-]{2,}\\.[a-z]{2,4}$")
 )
+
+//ValidateFormat ... Email
+func ValidateFormat(email string) bool {
+	if !emailRegexp.MatchString(email) {
+		return false
+	}
+	return true
+}
 
 //SignUp ... POST
 func (cn *Controller) SignUp(c iris.Context) {
@@ -96,25 +108,25 @@ func (cn *Controller) SignUp(c iris.Context) {
 //LogIn ... POST
 func (cn *Controller) LogIn(c iris.Context) {
 
+	userLogIn := models.User{}
 	user := models.User{}
-	userCheck := models.User{}
 
 	//Reading JSON data
-	if err := c.ReadJSON(&user); err != nil {
+	if err := c.ReadJSON(&userLogIn); err != nil {
 		c.StatusCode(iris.StatusInternalServerError)
 		c.JSON(iris.Map{"error": "creating user, read and parse form failed. " + err.Error()})
 		return
 	}
 
 	//Check that the needed data have been populated
-	if user.Username == "" || user.Password == "" {
+	if userLogIn.Username == "" || userLogIn.Password == "" {
 		c.StatusCode(iris.StatusBadRequest)
 		c.JSON(iris.Map{"error": "Please enter a username and password to login"})
 		return
 	}
 
 	//Check that the username and password exist in DB
-	_, err := cn.DB.QueryOne(&userCheck, "SELECT id, username, password, role FROM users WHERE username = ?", user.Username)
+	_, err := cn.DB.QueryOne(&user, "SELECT * FROM users WHERE username = ?", userLogIn.Username)
 	if err != nil {
 		if err == pg.ErrNoRows {
 			c.StatusCode(iris.StatusBadRequest)
@@ -124,17 +136,30 @@ func (cn *Controller) LogIn(c iris.Context) {
 	}
 
 	//Check Password
-	if bcrypt.CompareHashAndPassword([]byte(userCheck.Password), []byte(user.Password+SecretSalt)) != nil {
+	if bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(userLogIn.Password+SecretSalt)) != nil {
 		c.StatusCode(iris.StatusBadRequest)
 		c.JSON(iris.Map{"error": "Invalid username or password"})
 		return
 	}
 
+	if user.Twofa_activated == true {
+		//Check that the 2fa token is correct
+		if userLogIn.TwoFA_token == "" {
+			c.StatusCode(iris.StatusBadRequest)
+			c.JSON(iris.Map{"error": "Please enter your Two Factor Authentification Token"})
+			return
+		}
+		for cn.LogIn2FA(c, userLogIn.TwoFA_token) == false {
+			c.StatusCode(iris.StatusBadRequest)
+			c.JSON(iris.Map{"error": "The token provided is not correct, please try again"})
+		}
+	}
+
 	//Creation of the JWT
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"id":       userCheck.ID,
-		"username": userCheck.Username,
-		"role":     userCheck.Role,
+		"id":       user.ID,
+		"username": user.Username,
+		"role":     user.Role,
 		"expiring": time.Now().Add(time.Hour * 72).Unix(),
 	})
 	user.Token, err = token.SignedString([]byte(JWTSecretKey))
@@ -151,10 +176,25 @@ func (cn *Controller) LogIn(c iris.Context) {
 	})
 }
 
-//ValidateFormat ... Email
-func ValidateFormat(email string) bool {
-	if !emailRegexp.MatchString(email) {
-		return false
+//LogIn2FA ... POST -- Not tested as the QR code generated is not valid on Google Auth
+func (cn *Controller) LogIn2FA(c iris.Context, token string) bool {
+
+	// setup the one-time-password configuration.
+	otpConfig := &dgoogauth.OTPConfig{
+		Secret:      strings.TrimSpace(TWOFASecretKey),
+		WindowSize:  3,
+		HotpCounter: 0,
 	}
-	return true
+
+	trimmedToken := strings.TrimSpace(token)
+
+	// Validate token
+	ok, err := otpConfig.Authenticate(trimmedToken)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	return ok
+
 }

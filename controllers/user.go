@@ -1,18 +1,24 @@
 package controllers
 
 import (
+	"bytes"
+	"encoding/base32"
 	"fmt"
+	"image"
 	"os/exec"
+	"runtime"
 	"strings"
 	"time"
 
 	"github.com/AliceEmer/API-IRIS/models"
 	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/disintegration/imaging"
 	"github.com/go-pg/pg"
 	jwtmiddleware "github.com/iris-contrib/middleware/jwt"
 	mailer "github.com/kataras/go-mailer"
 	"github.com/kataras/iris"
 	"golang.org/x/crypto/bcrypt"
+	"rsc.io/qr"
 )
 
 //UpdatePassword ...
@@ -113,9 +119,7 @@ func (cn *Controller) UpdateRole(c iris.Context) {
 	}
 
 	c.StatusCode(iris.StatusOK)
-	c.JSON(iris.Map{
-		"OK": "Role updated",
-	})
+	c.JSON(iris.Map{"OK": "Role updated"})
 }
 
 //DeleteUser ... DELETE
@@ -235,5 +239,50 @@ func (cn *Controller) EmailVerification(c iris.Context) {
 	c.JSON(iris.Map{
 		"OK": "Email validated",
 	})
+
+}
+
+//Activate2FA ... 2FA activation --> TODO : confirmation with the password, login again at the end
+func (cn *Controller) Activate2FA(c iris.Context) {
+	userID, _ := c.Params().GetInt("id")
+
+	// maximize CPU usage for maximum performance
+	runtime.GOMAXPROCS(runtime.NumCPU())
+
+	// generate a random string - preferably 6 or 8 characters
+	secret := base32.StdEncoding.EncodeToString([]byte(TWOFASecretKey))
+	authLink := "otpauth://totp/Hades?secret=" + secret + "&issuer=Hades"
+
+	code, err := qr.Encode(authLink, qr.L) //L is the lowest lovel of error correction level (7% only can be damaged)
+	if err != nil {
+		c.StatusCode(iris.StatusBadRequest)
+		c.JSON(iris.Map{"error": "Error creating the QR code: " + err.Error()})
+		return
+	}
+
+	// convert byte to image for saving to file
+	imgByte := code.PNG()
+	img, _, _ := image.Decode(bytes.NewReader(imgByte))
+
+	err = imaging.Save(img, "./QRImgHades.png")
+	if err != nil {
+		c.StatusCode(iris.StatusBadRequest)
+		c.JSON(iris.Map{"error": "Error saving the QR code image: " + err.Error()})
+		return
+	}
+
+	//Two Factor Auth set to true in DB for this user
+	_, e := cn.DB.Exec("UPDATE users SET twofa_activated = true WHERE id = ?", userID)
+	if e != nil {
+		c.StatusCode(iris.StatusBadRequest)
+		c.JSON(iris.Map{"error": "Issue updating 2FA activation: " + e.Error()})
+		return
+	}
+
+	c.StatusCode(iris.StatusOK)
+	c.JSON(iris.Map{"OK": "QR code generated and saved to QRImgHades.png in the current repository."})
+
+	//c.Redirect("/login")
+	// ---> Redirection to LOGIN
 
 }

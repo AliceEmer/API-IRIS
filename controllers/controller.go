@@ -11,6 +11,7 @@ type Controller struct {
 
 //JWTSecretKey ... Signing Key for JWT
 const (
-	JWTSecretKey = "SigningKey"
-	SecretSalt   = "SecretSalt"
+	JWTSecretKey   = "SigningKey"
+	SecretSalt     = "SecretSalt"
+	TWOFASecretKey = "FactorTWOAuth"
 )

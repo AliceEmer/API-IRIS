@@ -71,6 +71,9 @@ func main() {
 	api.Use(jwtMiddleware.Serve)
 
 	api.Post("/user/{id:int}/emailverif", cn.EmailVerification)
+	api.Put("/user/{id:int}/activate2fa", cn.Activate2FA) // --> creation bool 2FA_activation
+	//https://github.com/dgryski/dgoogauth
+
 	api.Put("/user/{id:int}/resetpassword", cn.UpdatePassword)
 	api.Get("/persons", cn.GetAllPersons)
 	api.Get("/person/{id:int}", cn.GetPersonByID)
